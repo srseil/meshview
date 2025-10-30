@@ -7,14 +7,14 @@
 #include <glm/common.hpp>
 #include <glm/ext.hpp>
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
-#include "imgui_renderer.hpp"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 static void save_screenshot(std::string filename);
 
@@ -141,9 +141,13 @@ int main()
     glCreateBuffers(1, &perFrameDataBuf);
     glNamedBufferStorage(perFrameDataBuf, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    imgui_renderer::setup(window);
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 460 core");
 
     while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
@@ -178,21 +182,31 @@ int main()
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
         // Render imgui
-        imgui_renderer::update(width, height);
-        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        ImGui::ShowDemoWindow();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
         glfwSwapBuffers(window);
-        glfwPollEvents();
     }
 
-    imgui_renderer::destroy();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glDeleteBuffers(1, &perFrameDataBuf);
     glDeleteProgram(program);
     glDeleteShader(shaderFragment);
     glDeleteShader(shaderVertex);
     glDeleteVertexArrays(1, &vao);
+
     glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
 }
 

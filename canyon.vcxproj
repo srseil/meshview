@@ -131,10 +131,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="canyon.cpp" />
-    <ClCompile Include="imgui_renderer.cpp" />
+    <ClCompile Include="imgui_impl_glfw.cpp" />
+    <ClCompile Include="imgui_impl_opengl3.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="imgui_renderer.hpp" />
+    <ClInclude Include="imgui_impl_glfw.h" />
+    <ClInclude Include="imgui_impl_opengl3.h" />
+    <ClInclude Include="imgui_impl_opengl3_loader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
