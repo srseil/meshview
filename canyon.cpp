@@ -1,8 +1,18 @@
+#include <string>
+#include <chrono>
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/common.hpp>
 #include <glm/ext.hpp>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+
+static void save_screenshot(std::string filename);
 
 static const char* shaderCodeVertex = R"(
     #version 460 core
@@ -48,6 +58,7 @@ static const char* shaderCodeVertex = R"(
         color = isWireframe > 0 ? vec3(0.0) : col[idx];
     }
 )";
+
 static const char* shaderCodeFragment = R"(
     #version 460 core
 
@@ -64,6 +75,8 @@ struct PerFrameData {
     int isWireframe;
 };
 
+static GLFWwindow* window;
+
 int main()
 {
     glfwSetErrorCallback(
@@ -79,7 +92,7 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    GLFWwindow* window = glfwCreateWindow(1024, 768, "Canyon", nullptr, nullptr);
+    window = glfwCreateWindow(1024, 768, "Canyon", nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         exit(EXIT_FAILURE);
@@ -89,6 +102,12 @@ int main()
         [](GLFWwindow* window, int key, int scancode, int action, int mods) {
             if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
+            }
+            else if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
+                auto now = std::chrono::system_clock::now();
+                auto now_local = std::chrono::current_zone()->to_local(now);
+                std::string filename = std::format("{:%Y-%m-%d_%H_%M_%S}.png", now_local);
+                save_screenshot(filename);
             }
         }
     );
@@ -130,7 +149,6 @@ int main()
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
-
         
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -164,4 +182,14 @@ int main()
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
+}
+
+static void save_screenshot(std::string filename)
+{
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    uint8_t* data = (uint8_t*)malloc(width * height * 4);
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    stbi_write_png(filename.c_str(), width, height, 4, data, 0);
+    free(data);
 }
