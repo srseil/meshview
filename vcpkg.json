@@ -3,6 +3,7 @@
     "glad",
     "glfw3",
     "glm",
-    "stb"
+    "stb",
+    "imgui"
   ]
 }

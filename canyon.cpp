@@ -6,11 +6,15 @@
 #include <glm/glm.hpp>
 #include <glm/common.hpp>
 #include <glm/ext.hpp>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+
+#include "imgui_renderer.hpp"
 
 static void save_screenshot(std::string filename);
 
@@ -105,8 +109,8 @@ int main()
             }
             else if (key == GLFW_KEY_F12 && action == GLFW_PRESS) {
                 auto now = std::chrono::system_clock::now();
-                auto now_local = std::chrono::current_zone()->to_local(now);
-                std::string filename = std::format("{:%Y-%m-%d_%H_%M_%S}.png", now_local);
+                auto nowLocal = std::chrono::current_zone()->to_local(now);
+                std::string filename = std::format("{:%Y-%m-%d_%H_%M_%S}.png", nowLocal);
                 save_screenshot(filename);
             }
         }
@@ -128,29 +132,31 @@ int main()
     glAttachShader(program, shaderVertex);
     glAttachShader(program, shaderFragment);
     glLinkProgram(program);
-    glUseProgram(program);
-
+    
     GLuint vao;
     glCreateVertexArrays(1, &vao);
-    glBindVertexArray(vao);
 
     const GLsizeiptr kBufferSize = sizeof(PerFrameData);
     GLuint perFrameDataBuf;
     glCreateBuffers(1, &perFrameDataBuf);
     glNamedBufferStorage(perFrameDataBuf, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuf, 0, kBufferSize);
 
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_POLYGON_OFFSET_LINE);
-    glPolygonOffset(-1.0f, -1.0f);
+    imgui_renderer::setup(window);
 
     while (!glfwWindowShouldClose(window)) {
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
         
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_POLYGON_OFFSET_LINE);
+        glPolygonOffset(-1.0f, -1.0f);
+
+        glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuf, 0, kBufferSize);
+        glBindVertexArray(vao);
+        glUseProgram(program);
 
         const float ratio = width / (float)height;
         const glm::mat4 model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f));
@@ -158,8 +164,8 @@ int main()
 
         // Render filled cube
         PerFrameData perFrameData = {
-            perspective * model,
-            false
+            .mvp = perspective * model,
+            .isWireframe = false
         };
         glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -171,10 +177,16 @@ int main()
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
+        // Render imgui
+        imgui_renderer::update(width, height);
+        
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
+    imgui_renderer::destroy();
+
+    glDeleteBuffers(1, &perFrameDataBuf);
     glDeleteProgram(program);
     glDeleteShader(shaderFragment);
     glDeleteShader(shaderVertex);

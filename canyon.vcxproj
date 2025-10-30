@@ -131,6 +131,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="canyon.cpp" />
+    <ClCompile Include="imgui_renderer.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="imgui_renderer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
