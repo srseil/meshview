@@ -1,5 +1,6 @@
 #include <string>
 #include <chrono>
+#include <iostream>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -67,7 +68,7 @@ static const char* shaderCodeFragment = R"(
     #version 460 core
 
     layout (location = 0) in vec3 color;
-    layout (location = 0) out vec4 out_FragColor;
+    layout (location = 0) out vec4 out_FragColor;asdf
 
     void main() {
         out_FragColor = vec4(color, 1.0);
@@ -120,18 +121,40 @@ int main()
     gladLoadGL();
     glfwSwapInterval(1);
 
+    int shaderSuccess;
+    char shaderInfoLog[1024];
+
     const GLuint shaderVertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
     glCompileShader(shaderVertex);
+    glGetShaderiv(shaderVertex, GL_COMPILE_STATUS, &shaderSuccess);
+    if (!shaderSuccess) {
+        glGetShaderInfoLog(shaderVertex, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        std::cerr << "Vertex shader compilation failed: " << std::endl << shaderInfoLog << std::endl;
+        
+        exit(EXIT_FAILURE);
+    }
 
     const GLuint shaderFragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
     glCompileShader(shaderFragment);
+    glGetShaderiv(shaderFragment, GL_COMPILE_STATUS, &shaderSuccess);
+    if (!shaderSuccess) {
+        glGetShaderInfoLog(shaderFragment, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        std::cerr << "Fragment shader compilation failed:" << std::endl << shaderInfoLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
 
-    const GLuint program = glCreateProgram();
-    glAttachShader(program, shaderVertex);
-    glAttachShader(program, shaderFragment);
-    glLinkProgram(program);
+    const GLuint shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, shaderVertex);
+    glAttachShader(shaderProgram, shaderFragment);
+    glLinkProgram(shaderProgram);
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &shaderSuccess);
+    if (!shaderSuccess) {
+        glGetProgramInfoLog(shaderProgram, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        std::cerr << "Shader program linking failed: " << std::endl << shaderInfoLog << std::endl;
+        exit(EXIT_FAILURE);
+    }
     
     GLuint vao;
     glCreateVertexArrays(1, &vao);
@@ -160,7 +183,7 @@ int main()
 
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuf, 0, kBufferSize);
         glBindVertexArray(vao);
-        glUseProgram(program);
+        glUseProgram(shaderProgram);
 
         const float ratio = width / (float)height;
         const glm::mat4 model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f));
@@ -199,7 +222,7 @@ int main()
     ImGui::DestroyContext();
 
     glDeleteBuffers(1, &perFrameDataBuf);
-    glDeleteProgram(program);
+    glDeleteProgram(shaderProgram);
     glDeleteShader(shaderFragment);
     glDeleteShader(shaderVertex);
     glDeleteVertexArrays(1, &vao);
