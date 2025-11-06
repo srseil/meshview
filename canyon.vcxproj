@@ -131,10 +131,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="canyon.cpp" />
+    <ClCompile Include="GLAPITrace.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="GL.h" />
+    <ClInclude Include="GLAPI.h" />
+    <ClInclude Include="GLAPITrace.h" />
+    <ClInclude Include="glcorearb.h" />
     <ClInclude Include="imgui_impl_glfw.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />
     <ClInclude Include="imgui_impl_opengl3_loader.h" />

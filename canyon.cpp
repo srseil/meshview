@@ -2,7 +2,8 @@
 #include <chrono>
 #include <iostream>
 
-#include <glad/glad.h>
+#include "GL.h"
+
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
@@ -57,6 +58,7 @@ struct PerFrameData {
 };
 
 static GLFWwindow* window;
+static GL4API api;
 
 int main()
 {
@@ -94,46 +96,48 @@ int main()
     );
 
     glfwMakeContextCurrent(window);
-    gladLoadGL();
     glfwSwapInterval(1);
+
+    GetAPI4(&api, [](const char* func) -> void* {
+        return (void*)glfwGetProcAddress(func);
+    });
+    InjectAPITracer4(&api);
 
     int shaderSuccess;
     char shaderInfoLog[1024];
 
-    const GLuint shaderVertex = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
-    glCompileShader(shaderVertex);
-    glGetShaderiv(shaderVertex, GL_COMPILE_STATUS, &shaderSuccess);
+    const GLuint shaderVertex = api.glCreateShader(GL_VERTEX_SHADER);
+    api.glShaderSource(shaderVertex, 1, &shaderCodeVertex, nullptr);
+    api.glCompileShader(shaderVertex);
+    api.glGetShaderiv(shaderVertex, GL_COMPILE_STATUS, &shaderSuccess);
     if (!shaderSuccess) {
-        glGetShaderInfoLog(shaderVertex, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        api.glGetShaderInfoLog(shaderVertex, sizeof(shaderInfoLog), NULL, shaderInfoLog);
         std::cerr << "Vertex shader compilation failed: " << std::endl << shaderInfoLog << std::endl;
         
         exit(EXIT_FAILURE);
     }
 
-    const GLuint shaderFragment = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
-    glCompileShader(shaderFragment);
-    glGetShaderiv(shaderFragment, GL_COMPILE_STATUS, &shaderSuccess);
+    const GLuint shaderFragment = api.glCreateShader(GL_FRAGMENT_SHADER);
+    api.glShaderSource(shaderFragment, 1, &shaderCodeFragment, nullptr);
+    api.glCompileShader(shaderFragment);
+    api.glGetShaderiv(shaderFragment, GL_COMPILE_STATUS, &shaderSuccess);
     if (!shaderSuccess) {
-        glGetShaderInfoLog(shaderFragment, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        api.glGetShaderInfoLog(shaderFragment, sizeof(shaderInfoLog), NULL, shaderInfoLog);
         std::cerr << "Fragment shader compilation failed:" << std::endl << shaderInfoLog << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    const GLuint shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, shaderVertex);
-    glAttachShader(shaderProgram, shaderFragment);
-    glLinkProgram(shaderProgram);
-    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &shaderSuccess);
+    const GLuint shaderProgram = api.glCreateProgram();
+    api.glAttachShader(shaderProgram, shaderVertex);
+    api.glAttachShader(shaderProgram, shaderFragment);
+    api.glLinkProgram(shaderProgram);
+    api.glGetProgramiv(shaderProgram, GL_LINK_STATUS, &shaderSuccess);
     if (!shaderSuccess) {
-        glGetProgramInfoLog(shaderProgram, sizeof(shaderInfoLog), NULL, shaderInfoLog);
+        api.glGetProgramInfoLog(shaderProgram, sizeof(shaderInfoLog), NULL, shaderInfoLog);
         std::cerr << "Shader program linking failed: " << std::endl << shaderInfoLog << std::endl;
         exit(EXIT_FAILURE);
     }
     
-    
-
     const aiScene* scene = aiImportFile("duck/scene.gltf", aiProcess_Triangulate);
     if (!scene || !scene->HasMeshes()) {
         std::cerr << "Unable to load model: " << "duck/scene.gltf" << std::endl;
@@ -157,21 +161,21 @@ int main()
     aiReleaseImport(scene);
 
     GLuint vao;
-    glCreateVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    api.glCreateVertexArrays(1, &vao);
+    api.glBindVertexArray(vao);
     GLuint meshData;
-    glCreateBuffers(1, &meshData);
-    glNamedBufferStorage(meshData, sizeof(glm::vec3) * positions.size(), positions.data(), 0);
-    glVertexArrayVertexBuffer(vao, 0, meshData, 0, sizeof(glm::vec3));
-    glEnableVertexArrayAttrib(vao, 0);
-    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribBinding(vao, 0, 0);
+    api.glCreateBuffers(1, &meshData);
+    api.glNamedBufferStorage(meshData, sizeof(glm::vec3) * positions.size(), positions.data(), 0);
+    api.glVertexArrayVertexBuffer(vao, 0, meshData, 0, sizeof(glm::vec3));
+    api.glEnableVertexArrayAttrib(vao, 0);
+    api.glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    api.glVertexArrayAttribBinding(vao, 0, 0);
     const int numVertices = static_cast<int>(positions.size());
 
     const GLsizeiptr kBufferSize = sizeof(PerFrameData);
     GLuint perFrameDataBuf;
-    glCreateBuffers(1, &perFrameDataBuf);
-    glNamedBufferStorage(perFrameDataBuf, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    api.glCreateBuffers(1, &perFrameDataBuf);
+    api.glNamedBufferStorage(perFrameDataBuf, kBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
 
     ImGui::CreateContext();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -182,17 +186,17 @@ int main()
 
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
-        glViewport(0, 0, width, height);
+        api.glViewport(0, 0, width, height);
         
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        glEnable(GL_POLYGON_OFFSET_LINE);
-        glPolygonOffset(-1.0f, -1.0f);
+        api.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        api.glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        api.glEnable(GL_DEPTH_TEST);
+        api.glEnable(GL_POLYGON_OFFSET_LINE);
+        //api.glPolygonOffset(-1.0f, -1.0f);
 
-        glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuf, 0, kBufferSize);
-        glBindVertexArray(vao);
-        glUseProgram(shaderProgram);
+        api.glBindBufferRange(GL_UNIFORM_BUFFER, 0, perFrameDataBuf, 0, kBufferSize);
+        api.glBindVertexArray(vao);
+        api.glUseProgram(shaderProgram);
 
         const float ratio = width / (float)height;
         const glm::mat4 model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f));
@@ -203,15 +207,15 @@ int main()
             .mvp = perspective * model,
             .isWireframe = false
         };
-        glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDrawArrays(GL_TRIANGLES, 0, numVertices);
+        api.glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
+        api.glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        api.glDrawArrays(GL_TRIANGLES, 0, numVertices);
 
         // Render wireframe cube
         perFrameData.isWireframe = true;
-        glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, numVertices);
+        api.glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
+        api.glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        api.glDrawArrays(GL_TRIANGLES, 0, numVertices);
 
         // Render imgui
         ImGui_ImplOpenGL3_NewFrame();
@@ -230,11 +234,11 @@ int main()
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    glDeleteBuffers(1, &perFrameDataBuf);
-    glDeleteProgram(shaderProgram);
-    glDeleteShader(shaderFragment);
-    glDeleteShader(shaderVertex);
-    glDeleteVertexArrays(1, &vao);
+    api.glDeleteBuffers(1, &perFrameDataBuf);
+    api.glDeleteProgram(shaderProgram);
+    api.glDeleteShader(shaderFragment);
+    api.glDeleteShader(shaderVertex);
+    api.glDeleteVertexArrays(1, &vao);
 
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -247,7 +251,7 @@ static void save_screenshot(std::string filename)
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     uint8_t* data = (uint8_t*)malloc(width * height * 4);
-    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    api.glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
     stbi_write_png(filename.c_str(), width, height, 4, data, 0);
     free(data);
 }
