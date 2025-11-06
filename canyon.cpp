@@ -5,9 +5,12 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
-#include <glm/common.hpp>
 #include <glm/ext.hpp>
 #include <imgui.h>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+#include <assimp/cimport.h>
+#include <assimp/version.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -23,44 +26,16 @@ static const char* shaderCodeVertex = R"(
     #version 460 core
 
     layout (std140, binding = 0) uniform PerFrameData {
-        uniform mat4 mvp;
+        uniform mat4 MVP;
         uniform int isWireframe;
     };
+    layout (location = 0) in vec3 pos;
     layout (location = 0) out vec3 color;
 
-    const vec3 pos[8] = vec3[8](
-        vec3(-1.0, -1.0,  1.0),
-        vec3( 1.0, -1.0,  1.0),
-        vec3( 1.0,  1.0,  1.0),
-        vec3(-1.0,  1.0,  1.0),
-        vec3(-1.0, -1.0, -1.0),
-        vec3( 1.0, -1.0, -1.0),
-        vec3( 1.0,  1.0, -1.0),
-        vec3(-1.0,  1.0, -1.0)
-    );
-    const vec3 col[8] = vec3[8](
-        vec3(1.0, 0.0, 0.0),
-        vec3(0.0, 1.0, 0.0),
-        vec3(0.0, 0.0, 1.0),
-        vec3(1.0, 1.0, 0.0),
-        vec3(1.0, 1.0, 0.0),
-        vec3(0.0, 0.0, 1.0),
-        vec3(0.0, 1.0, 0.0),
-        vec3(1.0, 0.0, 0.0)
-    );
-    const int indices[36] = int[36](
-        0, 1, 2, 2, 3, 0,
-        1, 5, 6, 6, 2, 1,
-        7, 6, 5, 5, 4, 7,
-        4, 0, 3, 3, 7, 4,
-        4, 5, 1, 1, 0, 4,
-        3, 2, 6, 6, 7, 3
-    );
-
-    void main() {
-        int idx = indices[gl_VertexID];
-        gl_Position = mvp * vec4(pos[idx], 1.0);
-        color = isWireframe > 0 ? vec3(0.0) : col[idx];
+    void main()
+    {
+        gl_Position = MVP * vec4(pos, 1.0);
+        color = isWireframe > 0 ? vec3(0.0) : pos.xyz;
     }
 )";
 
@@ -68,9 +43,10 @@ static const char* shaderCodeFragment = R"(
     #version 460 core
 
     layout (location = 0) in vec3 color;
-    layout (location = 0) out vec4 out_FragColor;asdf
+    layout (location = 0) out vec4 out_FragColor;
 
-    void main() {
+    void main()
+    {
         out_FragColor = vec4(color, 1.0);
     }
 )";
@@ -156,8 +132,41 @@ int main()
         exit(EXIT_FAILURE);
     }
     
+    
+
+    const aiScene* scene = aiImportFile("duck/scene.gltf", aiProcess_Triangulate);
+    if (!scene || !scene->HasMeshes()) {
+        std::cerr << "Unable to load model: " << "duck/scene.gltf" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    std::vector<glm::vec3> positions;
+    const aiMesh* mesh = scene->mMeshes[0];
+    for (unsigned int i = 0; i != mesh->mNumFaces; i++) {
+        const aiFace& face = mesh->mFaces[i];
+        const unsigned int idx[3] = {
+            face.mIndices[0],
+            face.mIndices[1],
+            face.mIndices[2]
+        };
+        for (int j = 0; j < 3; j++) {
+            const aiVector3D v = mesh->mVertices[idx[j]];
+            positions.push_back(glm::vec3(v.x, v.z, v.y));
+        }
+    }
+    aiReleaseImport(scene);
+
     GLuint vao;
     glCreateVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    GLuint meshData;
+    glCreateBuffers(1, &meshData);
+    glNamedBufferStorage(meshData, sizeof(glm::vec3) * positions.size(), positions.data(), 0);
+    glVertexArrayVertexBuffer(vao, 0, meshData, 0, sizeof(glm::vec3));
+    glEnableVertexArrayAttrib(vao, 0);
+    glVertexArrayAttribFormat(vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(vao, 0, 0);
+    const int numVertices = static_cast<int>(positions.size());
 
     const GLsizeiptr kBufferSize = sizeof(PerFrameData);
     GLuint perFrameDataBuf;
@@ -196,13 +205,13 @@ int main()
         };
         glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, numVertices);
 
         // Render wireframe cube
         perFrameData.isWireframe = true;
         glNamedBufferSubData(perFrameDataBuf, 0, kBufferSize, &perFrameData);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        glDrawArrays(GL_TRIANGLES, 0, numVertices);
 
         // Render imgui
         ImGui_ImplOpenGL3_NewFrame();
