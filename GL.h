@@ -11,3 +11,5 @@ struct GL4API
 
 void GetAPI4(GL4API* api, PFNGETGLPROC GetGLProc);
 void InjectAPITracer4(GL4API* api);
+
+extern GL4API api;
