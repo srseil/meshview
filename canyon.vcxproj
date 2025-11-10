@@ -133,6 +133,7 @@
     <ClCompile Include="camera.cpp" />
     <ClCompile Include="canyon.cpp" />
     <ClCompile Include="cubemap.cpp" />
+    <ClCompile Include="fps.cpp" />
     <ClCompile Include="GLAPITrace.cpp" />
     <ClCompile Include="imgui_impl_glfw.cpp" />
     <ClCompile Include="imgui_impl_opengl3.cpp" />
@@ -141,6 +142,7 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="cubemap.h" />
+    <ClInclude Include="fps.h" />
     <ClInclude Include="GL.h" />
     <ClInclude Include="GLAPI.h" />
     <ClInclude Include="GLAPITrace.h" />

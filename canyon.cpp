@@ -25,6 +25,7 @@
 #include "shader.h"
 #include "cubemap.h"
 #include "camera.h"
+#include "fps.h"
 
 static void saveScreenshot(std::string filename);
 
@@ -212,11 +213,16 @@ int main()
 
         double timestamp = glfwGetTime();
         float deltaSeconds = 0.0f;
+        FramesPerSecondCounter fpsCounter(0.5f);
 
         while (!glfwWindowShouldClose(window)) {
+            std::cout << std::endl;
+
             const double newTimestamp = glfwGetTime();
             deltaSeconds = static_cast<float>(newTimestamp - timestamp);
             timestamp = newTimestamp;
+            fpsCounter.tick(deltaSeconds);
+            fprintf(stdout, "FPS: %f\n", fpsCounter.getFPS());
 
             glfwPollEvents();
 
@@ -285,7 +291,10 @@ int main()
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
-            ImGui::ShowDemoWindow();
+            //ImGui::ShowDemoWindow();
+            ImGui::Begin("Info", nullptr, 0);
+            ImGui::Text("FPS: %.1f", fpsCounter.getFPS());
+            ImGui::End();
 
             ImGui::Render();
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
