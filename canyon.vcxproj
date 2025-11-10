@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="camera.cpp" />
     <ClCompile Include="canyon.cpp" />
     <ClCompile Include="cubemap.cpp" />
     <ClCompile Include="GLAPITrace.cpp" />
@@ -138,6 +139,7 @@
     <ClCompile Include="shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="camera.h" />
     <ClInclude Include="cubemap.h" />
     <ClInclude Include="GL.h" />
     <ClInclude Include="GLAPI.h" />

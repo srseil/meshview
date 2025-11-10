@@ -24,6 +24,7 @@
 
 #include "shader.h"
 #include "cubemap.h"
+#include "camera.h"
 
 static void saveScreenshot(std::string filename);
 
@@ -43,6 +44,14 @@ struct VertexData {
 GL4API api;
 
 static GLFWwindow* window;
+
+static struct MouseState {
+    glm::vec2 pos = glm::vec2(0.0f);
+    bool pressedLeft = false;
+} mouseState;
+
+CameraPositionerFirstPerson positioner(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+Camera camera(positioner);
 
 int main()
 {
@@ -75,6 +84,32 @@ int main()
                 auto nowLocal = std::chrono::current_zone()->to_local(now);
                 std::string filename = std::format("{:%Y-%m-%d_%H_%M_%S}.png", nowLocal);
                 saveScreenshot(filename);
+            }
+            else {
+                const bool press = action != GLFW_RELEASE;
+                if (key == GLFW_KEY_W) positioner.movement.forward = press;
+                if (key == GLFW_KEY_S) positioner.movement.backward = press;
+                if (key == GLFW_KEY_A) positioner.movement.left = press;
+                if (key == GLFW_KEY_D) positioner.movement.right = press;
+                if (key == GLFW_KEY_SPACE) positioner.movement.up = press;
+                if (key == GLFW_KEY_LEFT_CONTROL) positioner.movement.down = press;
+                if (key == GLFW_KEY_LEFT_SHIFT) positioner.movement.fastSpeed = press;
+                if (key == GLFW_KEY_F) positioner.setUpVector(glm::vec3(0.0f, 1.0f, 0.0f));
+            }
+        }
+    );
+    glfwSetCursorPosCallback(window,
+        [](GLFWwindow* window, double x, double y) {
+            int width, height;
+            glfwGetFramebufferSize(window, &width, &height);
+            mouseState.pos.x = static_cast<float>(x / width);
+            mouseState.pos.y = static_cast<float>(y / height);
+        }
+    );
+    glfwSetMouseButtonCallback(window,
+        [](GLFWwindow* window, int button, int action, int mods) {
+            if (button == GLFW_MOUSE_BUTTON_LEFT) {
+                mouseState.pressedLeft = action == GLFW_PRESS;
             }
         }
     );
@@ -175,8 +210,17 @@ int main()
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init("#version 460 core");
 
+        double timestamp = glfwGetTime();
+        float deltaSeconds = 0.0f;
+
         while (!glfwWindowShouldClose(window)) {
+            const double newTimestamp = glfwGetTime();
+            deltaSeconds = static_cast<float>(newTimestamp - timestamp);
+            timestamp = newTimestamp;
+
             glfwPollEvents();
+
+            positioner.update(deltaSeconds, mouseState.pos, mouseState.pressedLeft);
 
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
@@ -196,15 +240,16 @@ int main()
             api.glBindVertexArray(vao);
 
             const float ratio = width / (float)height;
-            const glm::mat4 perspective = glm::perspective(45.0f, ratio, 0.1f, 1000.0f);
+            const glm::mat4 projection = glm::perspective(45.0f, ratio, 0.1f, 1000.0f);
+            const glm::mat4 view = camera.getViewMatrix();
 
             // Render filled cube
             {
                 const glm::mat4 model = glm::rotate(glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -3.5f)), (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f));
                 const PerFrameData perFrameData = {
                     .model = model,
-                    .mvp = perspective * model,
-                    .cameraPos = glm::vec4(0.0f),
+                    .mvp = projection * view * model,
+                    .cameraPos = glm::vec4(camera.getPosition(), 1.0f),
                     .isWireframe = false
                 };
                 modelProgram.useProgram();
@@ -226,8 +271,8 @@ int main()
                 const glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(100.0f));
                 const PerFrameData perFrameData = {
                     .model = model,
-                    .mvp = perspective * model,
-                    .cameraPos = glm::vec4(0.0f),
+                    .mvp = projection * view * model,
+                    .cameraPos = glm::vec4(camera.getPosition(), 1.0f),
                     .isWireframe = false
                 };
                 cubemapProgram.useProgram();
