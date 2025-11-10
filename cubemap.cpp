@@ -1,42 +1,72 @@
 #include <stdexcept>
+#include <filesystem>
 #include <stb_image.h>
 #include <stb_image_write.h>
+#include <stb_image_resize2.h>
 #include <glm/ext.hpp>
 
 #include "cubemap.h"
 
 static Bitmap convertEquirectangularMapToVerticalCross(const Bitmap& bitmap);
 static Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& bitmap);
+static Bitmap convertDiffuseToIrradiance(const Bitmap& input, int srcW, int srcH, int dstW, int dstH, int numMonteCarloSamples);
 
 Cubemap::Cubemap(std::string fileName)
 {
-    Bitmap bitmap(fileName);
-    Bitmap cross = convertEquirectangularMapToVerticalCross(bitmap);
-    //stbi_write_hdr("cross.hdr", cross.getWidth(), cross.getHeight(), 3, cross.getData());
-    Bitmap faces = convertVerticalCrossToCubeMapFaces(cross);
+    Bitmap diffuse(fileName);
+    Bitmap diffuseCross = convertEquirectangularMapToVerticalCross(diffuse);
+    Bitmap diffuseFaces = convertVerticalCrossToCubeMapFaces(diffuseCross);
 
-    api.glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &handle);
-    api.glTextureParameteri(handle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-    api.glTextureParameteri(handle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-    api.glTextureParameteri(handle, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
-    api.glTextureParameteri(handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    api.glTextureParameteri(handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    api.glTextureStorage2D(handle, 1, GL_RGB32F, faces.getWidth(), faces.getHeight());
-    const float* data = faces.getData();
+    api.glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &handleDiffuse);
+    api.glTextureParameteri(handleDiffuse, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleDiffuse, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleDiffuse, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleDiffuse, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    api.glTextureParameteri(handleDiffuse, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    api.glTextureStorage2D(handleDiffuse, 1, GL_RGB32F, diffuseFaces.getWidth(), diffuseFaces.getHeight());
+    const float* diffuseData = diffuseFaces.getData();
     for (unsigned int face = 0; face < 6; face++) {
-        api.glTextureSubImage3D(handle, 0, 0, 0, face, faces.getWidth(), faces.getHeight(), 1, GL_RGB, GL_FLOAT, data);
-        data += faces.getWidth() * faces.getHeight() * 3;
+        api.glTextureSubImage3D(handleDiffuse, 0, 0, 0, face, diffuseFaces.getWidth(), diffuseFaces.getHeight(), 1, GL_RGB, GL_FLOAT, diffuseData);
+        diffuseData += diffuseFaces.getWidth() * diffuseFaces.getHeight() * 3;
+    }
+
+    Bitmap irradiance;
+    std::filesystem::path path(fileName);
+    std::string irradianceFileName = path.stem().string() + "_irradiance" + path.extension().string();
+    if (std::filesystem::exists(irradianceFileName)) {
+        irradiance = Bitmap(irradianceFileName);
+    }
+    else {
+        irradiance = convertDiffuseToIrradiance(diffuse, diffuse.getWidth(), diffuse.getHeight(), 256, 128, 1024);
+        stbi_write_hdr(irradianceFileName.c_str(), irradiance.getWidth(), irradiance.getHeight(), 3, irradiance.getData());
+    }
+    Bitmap irradianceCross = convertEquirectangularMapToVerticalCross(irradiance);
+    Bitmap irradianceFaces = convertVerticalCrossToCubeMapFaces(irradianceCross);
+
+    api.glCreateTextures(GL_TEXTURE_CUBE_MAP, 1, &handleIrradiance);
+    api.glTextureParameteri(handleIrradiance, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleIrradiance, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleIrradiance, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+    api.glTextureParameteri(handleIrradiance, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    api.glTextureParameteri(handleIrradiance, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    api.glTextureStorage2D(handleIrradiance, 1, GL_RGB32F, irradianceFaces.getWidth(), irradianceFaces.getHeight());
+    const float* irradianceData = irradianceFaces.getData();
+    for (unsigned int face = 0; face < 6; face++) {
+        api.glTextureSubImage3D(handleIrradiance, 0, 0, 0, face, irradianceFaces.getWidth(), irradianceFaces.getHeight(), 1, GL_RGB, GL_FLOAT, irradianceData);
+        irradianceData += irradianceFaces.getWidth() * irradianceFaces.getHeight() * 3;
     }
 }
 
 Cubemap::~Cubemap()
 {
-    api.glDeleteTextures(1, &handle);
+    api.glDeleteTextures(1, &handleIrradiance);
+    api.glDeleteTextures(1, &handleDiffuse);
 }
 
-void Cubemap::bindTexture() const
+void Cubemap::bind() const
 {
-    api.glBindTextures(1, 1, &handle);
+    api.glBindTextures(1, 1, &handleDiffuse);
+    api.glBindTextures(2, 1, &handleIrradiance);
 }
 
 Bitmap::Bitmap(std::string fileName) : depth(1)
@@ -183,4 +213,57 @@ static Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& bitmap)
         }
     }
     return cubemap;
+}
+
+static float radicalInverseVdC(uint32_t bits)
+{
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10f;
+}
+
+static glm::vec2 hammersley2d(uint32_t i, uint32_t N)
+{
+    return glm::vec2(float(i) / float(N), radicalInverseVdC(i));
+}
+
+static Bitmap convertDiffuseToIrradiance(const Bitmap& input, int srcW, int srcH, int dstW, int dstH, int numMonteCarloSamples)
+{
+    assert(srcW == 2 * srcH);
+    Bitmap result(dstW, dstH, 1);
+    std::vector<glm::vec3> tmp(dstW * dstH);
+    stbir_resize(
+        input.getData(), srcW, srcH, 0,
+        reinterpret_cast<float*>(tmp.data()), dstW, dstH, 0,
+        static_cast<stbir_pixel_layout>(3), STBIR_TYPE_FLOAT, STBIR_EDGE_CLAMP, STBIR_FILTER_CUBICBSPLINE);
+    const glm::vec3* scratch = tmp.data();
+    srcW = dstW;
+    srcH = dstH;
+    for (int y = 0; y < dstH; y++) {
+        const float theta1 = float(y) / float(dstH) * glm::pi<float>();
+        for (int x = 0; x < dstW; x++) {
+            const float phi1 = float(x) / float(dstW) * glm::two_pi<float>();
+            const glm::vec3 v1 = glm::vec3(sin(theta1) * cos(phi1), sin(theta1) * sin(phi1), cos(theta1));
+            glm::vec3 color = glm::vec3(0.0f);
+            float weight = 0.0f;
+            for (int i = 0; i < numMonteCarloSamples; i++) {
+                const glm::vec2 h = hammersley2d(i, numMonteCarloSamples);
+                const int x1 = int(floor(h.x * srcW));
+                const int y1 = int(floor(h.y * srcH));
+                const float theta2 = float(y1) / float(srcH) * glm::pi<float>();
+                const float phi2 = float(x1) / float(srcW) * glm::two_pi<float>();
+                const glm::vec3 v2 = glm::vec3(sin(theta2) * cos(phi2), sin(theta2) * sin(phi2), cos(theta2));
+                const float nDotL = std::fmax(0.0f, glm::dot(v1, v2));
+                if (nDotL > 0.01f) {
+                    color += scratch[y1 * srcW + x1] * nDotL;
+                    weight += nDotL;
+                }
+            }
+            result.setPixel(x, y, 0, color / weight);
+        }
+    }
+    return result;
 }

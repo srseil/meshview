@@ -10,14 +10,17 @@ class Cubemap {
 public:
     Cubemap(std::string fileName);
     ~Cubemap();
-    GLuint getHandle() const { return handle; }
-    void bindTexture() const;
+    GLuint getHandleDiffuse() const { return handleDiffuse; }
+    GLuint getHandleIrradiance() const { return handleDiffuse; }
+    void bind() const;
 private:
-    GLuint handle;
+    GLuint handleDiffuse;
+    GLuint handleIrradiance;
 };
 
 class Bitmap {
 public:
+    Bitmap() : width(0), height(0), depth(0) {}
     Bitmap(std::string fileName);
     Bitmap(int width, int height, int depth);
     int getWidth() const { return width; }
