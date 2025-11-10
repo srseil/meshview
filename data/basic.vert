@@ -26,5 +26,4 @@ void main()
     vtx.uv = uv;
     vtx.normal = normal * normalMatrix;
     vtx.worldPos = (model * vec4(pos, 1.0)).xyz;
-    //color = isWireframe > 0 ? vec3(0.0) : pos.xyz;
 }

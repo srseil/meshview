@@ -36,5 +36,5 @@ void main()
     vec4 colorRefract = texture(texture1, refraction);
 
     color = color * mix(colorReflect, colorRefract, rTheta);
-    out_FragColor = color;
+    out_FragColor = isWireframe > 0 ? vec4(1.0) : color;
 }
