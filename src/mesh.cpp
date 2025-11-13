@@ -79,18 +79,18 @@ Mesh::Mesh(std::string_view fileName)
     // Center mesh at (0, 0, 0)
     glm::vec3 boundsMin = glm::vec3(0.0f);
     glm::vec3 boundsMax = glm::vec3(0.0f);
-    for (int i = 0; i < vertices.size(); i++) {
-        boundsMin.x = std::fmin(boundsMin.x, vertices[i].pos.x);
-        boundsMin.y = std::fmin(boundsMin.y, vertices[i].pos.y);
-        boundsMin.z = std::fmin(boundsMin.z, vertices[i].pos.z);
+    for (const VertexData& data : vertices) {
+        boundsMin.x = std::fmin(boundsMin.x, data.pos.x);
+        boundsMin.y = std::fmin(boundsMin.y, data.pos.y);
+        boundsMin.z = std::fmin(boundsMin.z, data.pos.z);
 
-        boundsMax.x = std::fmax(boundsMax.x, vertices[i].pos.x);
-        boundsMax.y = std::fmax(boundsMax.y, vertices[i].pos.y);
-        boundsMax.z = std::fmax(boundsMax.z, vertices[i].pos.z);
+        boundsMax.x = std::fmax(boundsMax.x, data.pos.x);
+        boundsMax.y = std::fmax(boundsMax.y, data.pos.y);
+        boundsMax.z = std::fmax(boundsMax.z, data.pos.z);
     }
     glm::vec3 centerOffset = (boundsMin + boundsMax) / 2.0f;
-    for (int i = 0; i < vertices.size(); i++) {
-        vertices[i].pos += centerOffset;
+    for (VertexData& data : vertices) {
+        data.pos += centerOffset;
     }
 
     api.glCreateVertexArrays(1, &vao);
