@@ -7,6 +7,19 @@
 
 #include "cubemap.h"
 
+static enum class CubemapFace : int {
+    PositiveX = 0,
+    NegativeX,
+    PositiveY,
+    NegativeY,
+    PositiveZ,
+    NegativeZ
+};
+
+static glm::vec3 faceCoordsToXYZ(int x, int y, CubemapFace face, int faceSize);
+static float radicalInverseVdC(uint32_t bits);
+static glm::vec2 hammersley2d(uint32_t i, uint32_t N);
+
 static Bitmap convertEquirectangularMapToVerticalCross(const Bitmap& bitmap);
 static Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& bitmap);
 static Bitmap convertDiffuseToIrradiance(const Bitmap& input, int srcW, int srcH, int dstW, int dstH, int numMonteCarloSamples);
@@ -146,22 +159,22 @@ void Bitmap::setPixel(int x, int y, int z, const glm::vec3& color)
     data[index + 2] = color.b;
 }
 
-static glm::vec3 faceCoordsToXYZ(int x, int y, int face, int faceSize)
+static glm::vec3 faceCoordsToXYZ(int x, int y, CubemapFace face, int faceSize)
 {
     const float a = 2.0f * float(x) / faceSize;
     const float b = 2.0f * float(y) / faceSize;
     switch (face) {
-    case 0: // GL_TEXTURE_CUBE_MAP_POSITIVE_X
+    case CubemapFace::PositiveX:
         return glm::vec3(-1.0f, a - 1.0f, b - 1.0f);
-    case 1: // GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+    case CubemapFace::NegativeX:
         return glm::vec3(a - 1.0f, -1.0f, 1.0f - b);
-    case 2: // GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+    case CubemapFace::PositiveY:
         return glm::vec3(1.0f, a - 1.0f, 1.0f - b);
-    case 3: // GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+    case CubemapFace::NegativeY:
         return glm::vec3(1.0f - a, 1.0f, 1.0f - b);
-    case 4: // GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+    case CubemapFace::PositiveZ:
         return glm::vec3(b - 1.0f, a - 1.0f, 1.0f);
-    case 5: // GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+    case CubemapFace::NegativeZ:
         return glm::vec3(1.0f - b, a - 1.0f, -1.0f);
     default:
         throw std::invalid_argument("invalid face");
@@ -189,7 +202,7 @@ static Bitmap convertEquirectangularMapToVerticalCross(const Bitmap& bitmap)
     for (int face = 0; face < 6; face++) {
         for (int x = 0; x < faceSize; x++) {
             for (int y = 0; y < faceSize; y++) {
-                const glm::vec3 p = faceCoordsToXYZ(x, y, face, faceSize);
+                const glm::vec3 p = faceCoordsToXYZ(x, y, static_cast<CubemapFace>(face), faceSize);
                 const float r = hypot(p.x, p.y);
                 const float theta = atan2(p.y, p.x);
                 const float phi = atan2(p.z, r);
@@ -230,28 +243,28 @@ static Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& bitmap)
             for (int x = 0; x < faceWidth; x++) {
                 int srcX = 0;
                 int srcY = 0;
-                switch (face) {
-                case 0: // GL_TEXTURE_CUBE_MAP_POSITIVE_X
+                switch (static_cast<CubemapFace>(face)) {
+                case CubemapFace::PositiveX:
                     srcX = x;
                     srcY = faceHeight + y;
                     break;
-                case 1: // GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+                case CubemapFace::NegativeX:
                     srcX = 2 * faceWidth + x;
                     srcY = faceHeight + y;
                     break;
-                case 2: // GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+                case CubemapFace::PositiveY:
                     srcX = 2 * faceWidth - x - 1;
                     srcY = faceHeight - y - 1;
                     break;
-                case 3: // GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+                case CubemapFace::NegativeY:
                     srcX = 2 * faceWidth - x - 1;
                     srcY = 3 * faceHeight - y - 1;
                     break;
-                case 4: // GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+                case CubemapFace::PositiveZ:
                     srcX = 2 * faceWidth - x - 1;
                     srcY = bitmap.getHeight() - y - 1;
                     break;
-                case 5: // GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+                case CubemapFace::NegativeZ:
                     srcX = faceWidth + x;
                     srcY = faceHeight + y;
                     break;
