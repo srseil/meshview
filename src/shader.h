@@ -4,7 +4,7 @@
 
 class GLShader {
 public:
-    explicit GLShader(const std::string_view fileName);
+    explicit GLShader(std::string_view fileName);
     ~GLShader();
 
     GLShader(const GLShader&) = delete;
