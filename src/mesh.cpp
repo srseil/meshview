@@ -140,6 +140,79 @@ Mesh::~Mesh()
     api.glDeleteVertexArrays(1, &vao);    
 }
 
+Mesh::Mesh(Mesh&& other) noexcept
+    : vao(other.vao)
+    , vertexData(other.vertexData)
+    , indexData(other.indexData)
+    , textureAlbedo(other.textureAlbedo)
+    , textureMetallicRougness(other.textureMetallicRougness)
+    , textureAmbientOcclusion(other.textureAmbientOcclusion)
+    , textureEmissive(other.textureEmissive)
+    , textureNormals(other.textureNormals)
+    , indices(std::move(other.indices))
+    , vertices(std::move(other.vertices))
+{
+    other.vao = 0;
+    other.vertexData = 0;
+    other.indexData = 0;
+    other.textureAlbedo = 0;
+    other.textureMetallicRougness = 0;
+    other.textureAmbientOcclusion = 0;
+    other.textureEmissive = 0;
+    other.textureNormals = 0;
+}
+
+Mesh& Mesh::operator=(Mesh&& other) noexcept
+{
+    if (this != &other) {
+        if (vao) {
+            api.glDeleteVertexArrays(1, &vao);
+        }
+        if (vertexData) {
+            api.glDeleteBuffers(1, &vertexData);
+        }
+        if (indexData) {
+            api.glDeleteBuffers(1, &indexData);
+        }
+        if (textureAlbedo) {
+            api.glDeleteTextures(1, &textureAlbedo);
+        }
+        if (textureMetallicRougness) {
+            api.glDeleteTextures(1, &textureMetallicRougness);
+        }
+        if (textureAmbientOcclusion) {
+            api.glDeleteTextures(1, &textureAmbientOcclusion);
+        }
+        if (textureEmissive) {
+            api.glDeleteTextures(1, &textureEmissive);
+        }
+        if (textureNormals) {
+            api.glDeleteTextures(1, &textureNormals);
+        }
+
+        vao = other.vao;
+        other.vao = 0;
+        vertexData = other.vertexData;
+        other.vertexData = 0;
+        indexData = other.indexData;
+        other.indexData = 0;
+        textureAlbedo = other.textureAlbedo;
+        other.textureAlbedo = 0;
+        textureMetallicRougness = other.textureMetallicRougness;
+        other.textureMetallicRougness = 0;
+        textureAmbientOcclusion = other.textureAmbientOcclusion;
+        other.textureAmbientOcclusion = 0;
+        textureEmissive = other.textureEmissive;
+        other.textureEmissive = 0;
+        textureNormals = other.textureNormals;
+        other.textureNormals = 0;
+
+        indices = std::move(other.indices);
+        vertices = std::move(other.vertices);
+    }
+    return *this;
+}
+
 void Mesh::bind() const
 {
     api.glBindVertexArray(vao);

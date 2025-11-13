@@ -10,8 +10,15 @@ struct VertexData {
 
 class Mesh {
 public:
-	Mesh(std::string_view fileName);
+	explicit Mesh(std::string_view fileName);
 	~Mesh();
+
+	Mesh(const Mesh&) = delete;
+	Mesh& operator=(const Mesh&) = delete;
+
+	Mesh(Mesh&& other) noexcept;
+	Mesh& operator=(Mesh&& other) noexcept;
+
 	void bind() const;
 	void draw() const;
 private:

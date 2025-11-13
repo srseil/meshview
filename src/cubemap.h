@@ -10,8 +10,15 @@ class Cubemap {
 public:
     explicit Cubemap(std::string_view fileName);
     ~Cubemap();
+
+    Cubemap(const Cubemap&) = delete;
+    Cubemap& operator=(const Cubemap&) = delete;
+
+    Cubemap(Cubemap&& other) noexcept;
+    Cubemap& operator=(Cubemap&& other) noexcept;
+
     GLuint getHandleDiffuse() const { return handleDiffuse; }
-    GLuint getHandleIrradiance() const { return handleDiffuse; }
+    GLuint getHandleIrradiance() const { return handleIrradiance; }
     void bind() const;
 private:
     GLuint handleDiffuse;
@@ -23,6 +30,13 @@ public:
     Bitmap() : width(0), height(0), depth(0) {}
     explicit Bitmap(std::string_view fileName);
     Bitmap(int width, int height, int depth);
+
+    Bitmap(const Bitmap&) = delete;
+    Bitmap& operator=(const Bitmap&) = delete;
+
+    Bitmap(Bitmap&& other) noexcept;
+    Bitmap& operator=(Bitmap&& other) noexcept;
+
     int getWidth() const { return width; }
     int getHeight() const { return height; }
     int getDepth() const { return depth; }

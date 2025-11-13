@@ -63,6 +63,29 @@ Cubemap::~Cubemap()
     api.glDeleteTextures(1, &handleDiffuse);
 }
 
+Cubemap::Cubemap(Cubemap&& other) noexcept : handleDiffuse(other.handleDiffuse), handleIrradiance(other.handleIrradiance)
+{
+    other.handleDiffuse = 0;
+    other.handleIrradiance = 0;
+}
+
+Cubemap& Cubemap::operator=(Cubemap&& other) noexcept
+{
+    if (this != &other) {
+        if (handleDiffuse) {
+            api.glDeleteTextures(1, &handleDiffuse);
+        }
+        if (handleIrradiance) {
+            api.glDeleteTextures(1, &handleIrradiance);
+        }
+        handleDiffuse = other.handleDiffuse;
+        other.handleDiffuse = 0;
+        handleIrradiance = other.handleIrradiance;
+        other.handleIrradiance = 0;
+    }
+    return *this;
+}
+
 void Cubemap::bind() const
 {
     api.glBindTextures(5, 1, &handleDiffuse);
@@ -83,6 +106,31 @@ Bitmap::Bitmap(std::string_view fileName) : depth(1)
 Bitmap::Bitmap(int width, int height, int depth) : width(width), height(height), depth(depth)
 {
     data.resize(width * height * depth * sizeof(float));
+}
+
+Bitmap::Bitmap(Bitmap&& other) noexcept
+    : width(other.width)
+    , height(other.height)
+    , depth(other.depth)
+    , data(std::move(other.data))
+{
+    other.width = 0;
+    other.height = 0;
+    other.depth = 0;
+}
+
+Bitmap& Bitmap::operator=(Bitmap&& other) noexcept
+{
+    if (this != &other) {
+        width = other.width;
+        other.width = 0;
+        height = other.height;
+        other.height = 0;
+        depth = other.depth;
+        other.depth = 0;
+        data = std::move(other.data);
+    }
+    return *this;
 }
 
 glm::vec3 Bitmap::getPixel(int x, int y, int z) const

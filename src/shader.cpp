@@ -36,6 +36,26 @@ GLShader::~GLShader()
     api.glDeleteShader(handle);
 }
 
+GLShader::GLShader(GLShader&& other) noexcept : type(other.type), handle(other.handle)
+{
+    other.type = 0;
+    other.handle = 0;
+}
+
+GLShader& GLShader::operator=(GLShader&& other) noexcept
+{
+    if (this != &other) {
+        if (handle) {
+            api.glDeleteShader(handle);
+        }
+        type = other.type;
+        other.type = 0;
+        handle = other.handle;
+        other.handle = 0;
+    }
+    return *this;
+}
+
 GLProgram::GLProgram(const GLShader& a, const GLShader& b) : handle(api.glCreateProgram())
 {
     api.glAttachShader(handle, a.getHandle());
@@ -54,6 +74,23 @@ GLProgram::GLProgram(const GLShader& a, const GLShader& b) : handle(api.glCreate
 GLProgram::~GLProgram()
 {
     api.glDeleteProgram(handle);
+}
+
+GLProgram::GLProgram(GLProgram&& other) noexcept : handle(other.handle)
+{
+    other.handle = 0;
+}
+
+GLProgram& GLProgram::operator=(GLProgram&& other) noexcept
+{
+    if (this != &other) {
+        if (handle) {
+            api.glDeleteProgram(handle);
+        }
+        handle = other.handle;
+        other.handle = 0;
+    }
+    return *this;
 }
 
 void GLProgram::useProgram() const
