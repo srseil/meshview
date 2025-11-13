@@ -96,16 +96,15 @@ Bitmap::Bitmap(std::string_view fileName) : depth(1)
 {
     std::string fileNameString(fileName);
     const float* imageData = stbi_loadf(fileNameString.c_str(), &width, &height, nullptr, 3);
-    data.reserve(width * height * depth * sizeof(float));
-    for (unsigned int i = 0; i < width * height * 3; i++) {
-        data.push_back(imageData[i]);
+    if (!imageData) {
+        throw std::runtime_error("Could not load image data: " + fileNameString);
     }
+    data.assign(imageData, imageData + width * height * depth * 3);
     stbi_image_free((void*)imageData);
 }
 
-Bitmap::Bitmap(int width, int height, int depth) : width(width), height(height), depth(depth)
+Bitmap::Bitmap(int width, int height, int depth) : width(width), height(height), depth(depth), data(static_cast<size_t>(width * height * depth * 3))
 {
-    data.resize(width * height * depth * sizeof(float));
 }
 
 Bitmap::Bitmap(Bitmap&& other) noexcept
