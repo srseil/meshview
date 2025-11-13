@@ -70,7 +70,7 @@ int main()
     );
 
     if (!glfwInit()) {
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Could not initialize GLFW");
     }
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -78,8 +78,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     window = glfwCreateWindow(1024, 768, "meshview", nullptr, nullptr);
     if (!window) {
-        glfwTerminate();
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Could not create GLFW window");
     }
 
     glfwSetKeyCallback(window,

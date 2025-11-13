@@ -12,8 +12,7 @@ GLShader::GLShader(const std::string_view fileName) : type(glShaderTypeFromFileN
     const std::string fileNameString(fileName);
     std::ifstream stream(fileNameString);
     if (!stream) {
-        std::cerr << "Cannot open file " << fileName << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Cannot open file: " + fileNameString);
     }
     std::stringstream buffer;
     buffer << stream.rdbuf();
@@ -27,7 +26,7 @@ GLShader::GLShader(const std::string_view fileName) : type(glShaderTypeFromFileN
         char infoLog[8192];
         api.glGetShaderInfoLog(handle, sizeof(infoLog), nullptr, infoLog);
         std::cerr << "Shader compilation failed:" << std::endl << infoLog << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Shader compilation failed: " + fileNameString);
     }
 }
 
@@ -67,7 +66,7 @@ GLProgram::GLProgram(const GLShader& a, const GLShader& b) : handle(api.glCreate
         char infoLog[8192];
         api.glGetProgramInfoLog(handle, sizeof(infoLog), NULL, infoLog);
         std::cerr << "Shader program linking failed: " << std::endl << infoLog << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Shader program linking failed");
     }
 }
 

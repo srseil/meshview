@@ -19,8 +19,7 @@ Mesh::Mesh(std::string_view fileName)
     const std::string fileNameString(fileName);
     const aiScene* scene = aiImportFile(fileNameString.c_str(), aiProcessPreset_TargetRealtime_Quality);
     if (!scene || !scene->HasMeshes() || !scene->HasMaterials()) {
-        std::cerr << "Unable to load mesh: " << fileName << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Unable to load mesh: " + fileNameString);
     }
     
     const aiMesh* mesh = scene->mMeshes[0];
@@ -47,36 +46,31 @@ Mesh::Mesh(std::string_view fileName)
     
     aiString albedoFileName;
     if (material->GetTexture(aiTextureType_BASE_COLOR, 0, &albedoFileName) != AI_SUCCESS) {
-        std::cerr << "Missing BASE_COLOR (albedo) texture" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Missing BASE_COLOR (albedo) texture");
     }
     std::string albedoPath = dataPath + albedoFileName.C_Str();
 
     aiString metallicRoughnessFileName;
     if (material->GetTexture(aiTextureType_METALNESS, 0, &metallicRoughnessFileName) != AI_SUCCESS) {
-        std::cerr << "Missing METALNESS (metallic roughness) texture" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Missing METALNESS (metallic roughness) texture");
     }
     std::string metallicRoughnessPath = dataPath + metallicRoughnessFileName.C_Str();
 
     aiString ambientOcclusionFileName;
     if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &ambientOcclusionFileName) != AI_SUCCESS) {
-        std::cerr << "Missing LIGHTMAP (ambient occlusion) texture" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Missing LIGHTMAP (ambient occlusion) texture");
     }
     std::string ambientOcclusionPath = dataPath + ambientOcclusionFileName.C_Str();
 
     aiString emissiveFileName;
     if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissiveFileName) != AI_SUCCESS) {
-        std::cerr << "Missing EMISSIVE (emissive) texture" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Missing EMISSIVE (emissive) texture");
     }
     std::string emissivePath = dataPath + emissiveFileName.C_Str();
 
     aiString normalsFileName;
     if (material->GetTexture(aiTextureType_NORMALS, 0, &normalsFileName) != AI_SUCCESS) {
-        std::cerr << "Missing NORMALS (normals) texture" << std::endl;
-        exit(EXIT_FAILURE);
+        throw std::runtime_error("Missing NORMALS (normals) texture");
     }
     std::string normalsPath = dataPath + normalsFileName.C_Str();
 
