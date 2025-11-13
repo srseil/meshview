@@ -130,6 +130,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\bitmap.cpp" />
     <ClCompile Include="src\camera.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\cubemap.cpp" />
@@ -141,6 +142,7 @@
     <ClCompile Include="src\shader.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\bitmap.h" />
     <ClInclude Include="src\camera.h" />
     <ClInclude Include="src\cubemap.h" />
     <ClInclude Include="src\fps.h" />
