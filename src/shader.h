@@ -4,7 +4,7 @@
 
 class GLShader {
 public:
-    GLShader(const std::string_view fileName);
+    explicit GLShader(const std::string_view fileName);
     ~GLShader();
     GLenum getType() const { return type; }
     GLuint getHandle() const { return handle; }
@@ -15,7 +15,7 @@ private:
 
 class GLProgram {
 public:
-    GLProgram(const GLShader& a, const GLShader& b);
+    explicit GLProgram(const GLShader& a, const GLShader& b);
     ~GLProgram();
     void useProgram() const;
     GLuint getHandle() const { return handle; }
