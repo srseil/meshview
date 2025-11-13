@@ -5,4 +5,5 @@ vcpkg_installed/
 enc_temp_folder/
 imgui.ini
 *_irradiance.*
+meshview.vcxproj.user
 
