@@ -130,29 +130,29 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="camera.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="cubemap.cpp" />
-    <ClCompile Include="fps.cpp" />
-    <ClCompile Include="GLAPITrace.cpp" />
-    <ClCompile Include="imgui_impl_glfw.cpp" />
-    <ClCompile Include="imgui_impl_opengl3.cpp" />
-    <ClCompile Include="mesh.cpp" />
-    <ClCompile Include="shader.cpp" />
+    <ClCompile Include="src\camera.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\cubemap.cpp" />
+    <ClCompile Include="src\fps.cpp" />
+    <ClCompile Include="src\gl\gl_api_trace.cpp" />
+    <ClCompile Include="src\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="src\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\mesh.cpp" />
+    <ClCompile Include="src\shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="camera.h" />
-    <ClInclude Include="cubemap.h" />
-    <ClInclude Include="fps.h" />
-    <ClInclude Include="GL.h" />
-    <ClInclude Include="GLAPI.h" />
-    <ClInclude Include="GLAPITrace.h" />
-    <ClInclude Include="glcorearb.h" />
-    <ClInclude Include="imgui_impl_glfw.h" />
-    <ClInclude Include="imgui_impl_opengl3.h" />
-    <ClInclude Include="imgui_impl_opengl3_loader.h" />
-    <ClInclude Include="mesh.h" />
-    <ClInclude Include="shader.h" />
+    <ClInclude Include="src\camera.h" />
+    <ClInclude Include="src\cubemap.h" />
+    <ClInclude Include="src\fps.h" />
+    <ClInclude Include="src\gl\gl.h" />
+    <ClInclude Include="src\gl\gl_api.h" />
+    <ClInclude Include="src\gl\gl_api_trace.h" />
+    <ClInclude Include="src\gl\gl_core_arb.h" />
+    <ClInclude Include="src\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="src\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="src\imgui\imgui_impl_opengl3_loader.h" />
+    <ClInclude Include="src\mesh.h" />
+    <ClInclude Include="src\shader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="data\cubemap.frag" />

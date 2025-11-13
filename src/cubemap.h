@@ -4,7 +4,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 
-#include "GL.h"
+#include "gl/gl.h"
 
 class Cubemap {
 public:

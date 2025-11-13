@@ -1,6 +1,6 @@
 #pragma once
 
-#include "GL.h"
+#include "gl/gl.h"
 
 class GLShader {
 public:

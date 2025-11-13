@@ -8,7 +8,7 @@
 #include <assimp/version.h>
 #include <stb_image.h>
 
-#include "GL.h"
+#include "gl/gl.h"
 
 #include "mesh.h"
 
