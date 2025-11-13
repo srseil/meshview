@@ -21,7 +21,7 @@ Bitmap::Bitmap(std::string_view fileName) : depth(1)
     stbi_image_free((void*)imageData);
 }
 
-Bitmap::Bitmap(int width, int height, int depth) : width(width), height(height), depth(depth), data(static_cast<size_t>(width* height* depth * 3))
+Bitmap::Bitmap(int width, int height, int depth) : width(width), height(height), depth(depth), data(static_cast<size_t>(width * height * depth * 3))
 {
 }
 
