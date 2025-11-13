@@ -29,7 +29,7 @@
 #include "camera.h"
 #include "fps.h"
 
-static void saveScreenshot(std::string filename);
+static void saveScreenshot(std::string_view fileName);
 
 struct PerFrameData {
     glm::mat4 model;
@@ -148,7 +148,7 @@ int main()
         GLShader cubemapFragment("data/cubemap.frag");
         GLProgram cubemapProgram(cubemapVertex, cubemapFragment);
 
-        Cubemap cubemap("data/piazza_bologni_4k.hdr");
+        Cubemap cubemap("data/piazza_bologni_1k.hdr");
         cubemap.bind();
 
         Mesh mesh("data/DamagedHelmet/DamagedHelmet.gltf");
@@ -309,12 +309,13 @@ int main()
     return 0;
 }
 
-static void saveScreenshot(std::string fileName)
+static void saveScreenshot(std::string_view fileName)
 {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     uint8_t* data = (uint8_t*)malloc(width * height * 4);
     api.glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
-    stbi_write_png(fileName.c_str(), width, height, 4, data, 0);
+    std::string fileNameString(fileName);
+    stbi_write_png(fileNameString.c_str(), width, height, 4, data, 0);
     free(data);
 }

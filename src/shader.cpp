@@ -5,11 +5,12 @@
 
 #include "shader.h"
 
-static GLenum glShaderTypeFromFileName(std::string fileName);
+static GLenum glShaderTypeFromFileName(std::string_view fileName);
 
-GLShader::GLShader(const std::string fileName) : type(glShaderTypeFromFileName(fileName)), handle(api.glCreateShader(type))
+GLShader::GLShader(const std::string_view fileName) : type(glShaderTypeFromFileName(fileName)), handle(api.glCreateShader(type))
 {
-    std::ifstream stream(fileName);
+    const std::string fileNameString(fileName);
+    std::ifstream stream(fileNameString);
     if (!stream) {
         std::cerr << "Cannot open file " << fileName << std::endl;
         exit(EXIT_FAILURE);
@@ -60,7 +61,7 @@ void GLProgram::useProgram() const
     api.glUseProgram(handle);
 }
 
-static GLenum glShaderTypeFromFileName(std::string fileName)
+static GLenum glShaderTypeFromFileName(std::string_view fileName)
 {
     if (fileName.ends_with(".vert")) {
         return GL_VERTEX_SHADER;

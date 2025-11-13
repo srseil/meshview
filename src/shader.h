@@ -4,7 +4,7 @@
 
 class GLShader {
 public:
-    GLShader(const std::string fileName);
+    GLShader(const std::string_view fileName);
     ~GLShader();
     GLenum getType() const { return type; }
     GLuint getHandle() const { return handle; }

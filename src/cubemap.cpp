@@ -11,7 +11,7 @@ static Bitmap convertEquirectangularMapToVerticalCross(const Bitmap& bitmap);
 static Bitmap convertVerticalCrossToCubeMapFaces(const Bitmap& bitmap);
 static Bitmap convertDiffuseToIrradiance(const Bitmap& input, int srcW, int srcH, int dstW, int dstH, int numMonteCarloSamples);
 
-Cubemap::Cubemap(std::string fileName)
+Cubemap::Cubemap(std::string_view fileName)
 {
     Bitmap diffuse(fileName);
     Bitmap diffuseCross = convertEquirectangularMapToVerticalCross(diffuse);
@@ -69,9 +69,10 @@ void Cubemap::bind() const
     api.glBindTextures(6, 1, &handleIrradiance);
 }
 
-Bitmap::Bitmap(std::string fileName) : depth(1)
+Bitmap::Bitmap(std::string_view fileName) : depth(1)
 {
-    const float* imageData = stbi_loadf(fileName.c_str(), &width, &height, nullptr, 3);
+    std::string fileNameString(fileName);
+    const float* imageData = stbi_loadf(fileNameString.c_str(), &width, &height, nullptr, 3);
     data.reserve(width * height * depth * sizeof(float));
     for (unsigned int i = 0; i < width * height * 3; i++) {
         data.push_back(imageData[i]);

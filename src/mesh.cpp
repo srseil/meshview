@@ -12,11 +12,12 @@
 
 #include "mesh.h"
 
-static void loadTexture(const char* filePath, GLuint* handle);
+static void loadTexture(std::string_view filePath, GLuint* handle);
 
-Mesh::Mesh(std::string fileName)
+Mesh::Mesh(std::string_view fileName)
 {
-    const aiScene* scene = aiImportFile(fileName.c_str(), aiProcessPreset_TargetRealtime_Quality);
+    const std::string fileNameString(fileName);
+    const aiScene* scene = aiImportFile(fileNameString.c_str(), aiProcessPreset_TargetRealtime_Quality);
     if (!scene || !scene->HasMeshes() || !scene->HasMaterials()) {
         std::cerr << "Unable to load mesh: " << fileName << std::endl;
         exit(EXIT_FAILURE);
@@ -154,10 +155,11 @@ void Mesh::draw() const
     api.glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, nullptr);
 }
 
-static void loadTexture(const char* filePath, GLuint* handle)
+static void loadTexture(std::string_view filePath, GLuint* handle)
 {
     int width, height;
-    const uint8_t* data = stbi_load(filePath, &width, &height, nullptr, STBI_rgb_alpha);
+    std::string filePathString(filePath);
+    const uint8_t* data = stbi_load(filePathString.c_str(), &width, &height, nullptr, STBI_rgb_alpha);
     api.glCreateTextures(GL_TEXTURE_2D, 1, handle);
     api.glTextureParameteri(*handle, GL_TEXTURE_MAX_LEVEL, 0);
     api.glTextureParameteri(*handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR);

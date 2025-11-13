@@ -10,7 +10,7 @@ struct VertexData {
 
 class Mesh {
 public:
-	Mesh(std::string fileName);
+	Mesh(std::string_view fileName);
 	~Mesh();
 	void bind() const;
 	void draw() const;

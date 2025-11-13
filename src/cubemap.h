@@ -8,7 +8,7 @@
 
 class Cubemap {
 public:
-    Cubemap(std::string fileName);
+    Cubemap(std::string_view fileName);
     ~Cubemap();
     GLuint getHandleDiffuse() const { return handleDiffuse; }
     GLuint getHandleIrradiance() const { return handleDiffuse; }
@@ -21,7 +21,7 @@ private:
 class Bitmap {
 public:
     Bitmap() : width(0), height(0), depth(0) {}
-    Bitmap(std::string fileName);
+    Bitmap(std::string_view fileName);
     Bitmap(int width, int height, int depth);
     int getWidth() const { return width; }
     int getHeight() const { return height; }
