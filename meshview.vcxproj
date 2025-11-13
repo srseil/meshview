@@ -159,7 +159,6 @@
     <None Include="data\cubemap.vert" />
     <None Include="data\mesh.frag" />
     <None Include="data\mesh.vert" />
-    <None Include="data\pbr.sp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
