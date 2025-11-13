@@ -312,9 +312,9 @@ static void saveScreenshot(std::string_view fileName)
 {
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    uint8_t* data = (uint8_t*)malloc(width * height * 4);
-    api.glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    std::vector<uint8_t> data(static_cast<size_t>(width * height * 4));
+    api.glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
     std::string fileNameString(fileName);
-    stbi_write_png(fileNameString.c_str(), width, height, 4, data, 0);
-    free(data);
+    stbi_flip_vertically_on_write(1);
+    stbi_write_png(fileNameString.c_str(), width, height, 4, data.data(), 0);
 }
