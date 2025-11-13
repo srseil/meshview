@@ -1,4 +1,5 @@
 #include <iostream>
+#include <filesystem>
 
 #include <glm/glm.hpp>
 #include <assimp/scene.h>
@@ -11,10 +12,12 @@
 
 #include "mesh.h"
 
+static void loadTexture(const char* filePath, GLuint* handle);
+
 Mesh::Mesh(std::string fileName)
 {
     const aiScene* scene = aiImportFile(fileName.c_str(), aiProcessPreset_TargetRealtime_Quality);
-    if (!scene || !scene->HasMeshes()) {
+    if (!scene || !scene->HasMeshes() || !scene->HasMaterials()) {
         std::cerr << "Unable to load mesh: " << fileName << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -31,13 +34,54 @@ Mesh::Mesh(std::string fileName)
         const aiVector3D normal = mesh->mNormals[i];
         const aiVector3D uv = mesh->mTextureCoords[0][i];
         vertices.push_back({
-            .pos = glm::vec3(pos.x, pos.z, pos.y),
+            .pos = glm::vec3(pos.x, pos.y, pos.z),
             .normal = glm::vec3(normal.x, normal.y, normal.z),
-            .uv = glm::vec2(uv.x, uv.y)
+            .uv = glm::vec2(uv.x, -uv.y)
         });
     }
+
+    std::filesystem::path path(fileName);
+    std::string dataPath = path.parent_path().string() + "/";
+    aiMaterial* material = scene->mMaterials[0];
+    
+    aiString albedoFileName;
+    if (material->GetTexture(aiTextureType_BASE_COLOR, 0, &albedoFileName) != AI_SUCCESS) {
+        std::cerr << "Missing BASE_COLOR (albedo) texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::string albedoPath = dataPath + albedoFileName.C_Str();
+
+    aiString metallicRoughnessFileName;
+    if (material->GetTexture(aiTextureType_METALNESS, 0, &metallicRoughnessFileName) != AI_SUCCESS) {
+        std::cerr << "Missing METALNESS (metallic roughness) texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::string metallicRoughnessPath = dataPath + metallicRoughnessFileName.C_Str();
+
+    aiString ambientOcclusionFileName;
+    if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &ambientOcclusionFileName) != AI_SUCCESS) {
+        std::cerr << "Missing LIGHTMAP (ambient occlusion) texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::string ambientOcclusionPath = dataPath + ambientOcclusionFileName.C_Str();
+
+    aiString emissiveFileName;
+    if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissiveFileName) != AI_SUCCESS) {
+        std::cerr << "Missing EMISSIVE (emissive) texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::string emissivePath = dataPath + emissiveFileName.C_Str();
+
+    aiString normalsFileName;
+    if (material->GetTexture(aiTextureType_NORMALS, 0, &normalsFileName) != AI_SUCCESS) {
+        std::cerr << "Missing NORMALS (normals) texture" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    std::string normalsPath = dataPath + normalsFileName.C_Str();
+
     aiReleaseImport(scene);
 
+    // Center mesh at (0, 0, 0)
     glm::vec3 boundsMin = glm::vec3(0.0f);
     glm::vec3 boundsMax = glm::vec3(0.0f);
     for (int i = 0; i < vertices.size(); i++) {
@@ -49,7 +93,7 @@ Mesh::Mesh(std::string fileName)
         boundsMax.y = std::fmax(boundsMax.y, vertices[i].pos.y);
         boundsMax.z = std::fmax(boundsMax.z, vertices[i].pos.z);
     }
-    glm::vec3 centerOffset = boundsMin - boundsMax;
+    glm::vec3 centerOffset = (boundsMin + boundsMax) / 2.0f;
     for (int i = 0; i < vertices.size(); i++) {
         vertices[i].pos += centerOffset;
     }
@@ -76,20 +120,20 @@ Mesh::Mesh(std::string fileName)
     api.glNamedBufferStorage(indexData, sizeof(unsigned int) * indices.size(), indices.data(), 0);
     api.glVertexArrayElementBuffer(vao, indexData);
 
-    int texWidth, texHeight;
-    const uint8_t* texData = stbi_load("data/duck/textures/Duck_baseColor.png", &texWidth, &texHeight, nullptr, 3);
-    api.glCreateTextures(GL_TEXTURE_2D, 1, &texture);
-    api.glTextureParameteri(texture, GL_TEXTURE_MAX_LEVEL, 0);
-    api.glTextureParameteri(texture, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    api.glTextureParameteri(texture, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    api.glTextureStorage2D(texture, 1, GL_RGB8, texWidth, texHeight);
-    api.glTextureSubImage2D(texture, 0, 0, 0, texWidth, texHeight, GL_RGB, GL_UNSIGNED_BYTE, texData);
-    stbi_image_free((void*)texData);
+    loadTexture(albedoPath.c_str(), &textureAlbedo);
+    loadTexture(metallicRoughnessPath.c_str(), &textureMetallicRougness);
+    loadTexture(ambientOcclusionPath.c_str(), &textureAmbientOcclusion);
+    loadTexture(emissivePath.c_str(), &textureEmissive);
+    loadTexture(normalsPath.c_str(), &textureNormals);
 }
 
 Mesh::~Mesh()
 {
-    api.glDeleteTextures(1, &texture);
+    api.glDeleteTextures(1, &textureNormals);
+    api.glDeleteTextures(1, &textureEmissive);
+    api.glDeleteTextures(1, &textureAmbientOcclusion);
+    api.glDeleteTextures(1, &textureMetallicRougness);
+    api.glDeleteTextures(1, &textureAlbedo);
     api.glDeleteBuffers(1, &indexData);
     api.glDeleteBuffers(1, &vertexData);
     api.glDeleteVertexArrays(1, &vao);    
@@ -98,10 +142,27 @@ Mesh::~Mesh()
 void Mesh::bind() const
 {
     api.glBindVertexArray(vao);
-    api.glBindTextures(0, 1, &texture);
+    api.glBindTextures(0, 1, &textureAlbedo);
+    api.glBindTextures(1, 1, &textureMetallicRougness);
+    api.glBindTextures(2, 1, &textureAmbientOcclusion);
+    api.glBindTextures(3, 1, &textureEmissive);
+    api.glBindTextures(4, 1, &textureNormals);
 }
 
 void Mesh::draw() const
 {
     api.glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(indices.size()), GL_UNSIGNED_INT, nullptr);
+}
+
+static void loadTexture(const char* filePath, GLuint* handle)
+{
+    int width, height;
+    const uint8_t* data = stbi_load(filePath, &width, &height, nullptr, STBI_rgb_alpha);
+    api.glCreateTextures(GL_TEXTURE_2D, 1, handle);
+    api.glTextureParameteri(*handle, GL_TEXTURE_MAX_LEVEL, 0);
+    api.glTextureParameteri(*handle, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    api.glTextureParameteri(*handle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    api.glTextureStorage2D(*handle, 1, GL_RGBA8, width, height);
+    api.glTextureSubImage2D(*handle, 0, 0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, data);
+    stbi_image_free((void*)data);
 }

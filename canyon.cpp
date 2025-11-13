@@ -8,6 +8,9 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <gli/gli.hpp>
+#include <gli/texture2d.hpp>
+#include <gli/load_ktx.hpp>
 #include <imgui.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -30,7 +33,8 @@ static void saveScreenshot(std::string filename);
 
 struct PerFrameData {
     glm::mat4 model;
-    glm::mat4 mvp;
+    glm::mat4 view;
+    glm::mat4 proj;
     glm::vec4 cameraPos;
     int isWireframe;
 };
@@ -44,13 +48,17 @@ static struct MouseState {
     bool pressedLeft = false;
 } mouseState;
 
-CameraPositionerFirstPerson positioner(glm::vec3(-3.0f, 1.0f, -3.0f), glm::vec3(0.0f, -1.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+CameraPositionerFirstPerson positioner(glm::vec3(1.0f, 1.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 Camera camera(positioner);
 
 static struct RenderState {
     bool fill = true;
     bool wireframe = false;
     bool rotate = false;
+    bool transform = false;
+    float translation[3];
+    float rotation[3];
+    float scale[3] = { 1.0f, 1.0f, 1.0f };
 } renderState;
 
 int main()
@@ -132,19 +140,43 @@ int main()
 
     // Create new scope to facilitate RAII for shaders/meshes before GL context is destroyed
     {
-        GLShader modelVertex("data/basic.vert");
-        GLShader modelFragment("data/basic.frag");
+        GLShader modelVertex("data/mesh.vert");
+        GLShader modelFragment("data/mesh.frag");
         GLProgram modelProgram(modelVertex, modelFragment);
 
         GLShader cubemapVertex("data/cubemap.vert");
         GLShader cubemapFragment("data/cubemap.frag");
         GLProgram cubemapProgram(cubemapVertex, cubemapFragment);
 
-        Cubemap cubemap("data/piazza_bologni_1k.hdr");
+        Cubemap cubemap("data/piazza_bologni_4k.hdr");
         cubemap.bind();
 
-        Mesh mesh("data/duck/scene.gltf");
+        Mesh mesh("data/DamagedHelmet/DamagedHelmet.gltf");
         mesh.bind();
+
+        GLuint brdfLutHandle;
+        {
+            gli::texture tex = gli::load_ktx("data/brdf_lut.ktx");
+            gli::gl GL(gli::gl::PROFILE_KTX);
+            gli::gl::format const format = GL.translate(tex.format(), tex.swizzles());
+            glm::tvec3<GLsizei> extent(tex.extent(0));
+            int width = extent.x;
+            int height = extent.y;
+            int numMipmaps = 1;
+            while ((width | height) >> numMipmaps) {
+                numMipmaps += 1;
+            }
+            api.glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            api.glCreateTextures(GL_TEXTURE_2D, 1, &brdfLutHandle);
+            api.glTextureParameteri(brdfLutHandle, GL_TEXTURE_MAX_LEVEL, 0);
+            api.glTextureParameteri(brdfLutHandle, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            api.glTextureParameteri(brdfLutHandle, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            api.glTextureParameteri(brdfLutHandle, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            api.glTextureParameteri(brdfLutHandle, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+            api.glTextureStorage2D(brdfLutHandle, numMipmaps, format.Internal, width, height);
+            api.glTextureSubImage2D(brdfLutHandle, 0, 0, 0, width, height, format.External, format.Type, tex.data(0, 0, 0));
+        }
+        api.glBindTextureUnit(7, brdfLutHandle);
 
         GLuint perFrameDataBuf;
         api.glCreateBuffers(1, &perFrameDataBuf);
@@ -166,7 +198,9 @@ int main()
 
             glfwPollEvents();
 
-            positioner.update(deltaSeconds, mouseState.pos, mouseState.pressedLeft);
+            if (!ImGui::GetIO().WantCaptureMouse) {
+                positioner.update(deltaSeconds, mouseState.pos, mouseState.pressedLeft);
+            }
 
             int width, height;
             glfwGetFramebufferSize(window, &width, &height);
@@ -184,12 +218,24 @@ int main()
 
             // Render mesh
             {
-                const glm::mat4 model = renderState.rotate
-                    ? glm::rotate(glm::identity<glm::mat4>(), (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f))
-                    : glm::identity<glm::mat4>();
+                glm::mat4 model = glm::identity<glm::mat4>();
+                if (renderState.rotate) {
+                    model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(1.0f, 1.0f, 1.0f));
+                }
+                else if (renderState.transform) {
+                    glm::mat4 translation = glm::translate(glm::identity<glm::mat4>(), glm::vec3(renderState.translation[0], renderState.translation[1], renderState.translation[2]));
+                    glm::mat4 rotation = glm::mat4(glm::quat(
+                        glm::angleAxis(glm::radians(renderState.rotation[0]), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                        glm::angleAxis(glm::radians(renderState.rotation[1]), glm::vec3(0.0f, 1.0f, 0.0f)) *
+                        glm::angleAxis(glm::radians(renderState.rotation[2]), glm::vec3(0.0f, 0.0f, 1.0f))
+                    ));
+                    glm::mat4 scale = glm::scale(glm::identity<glm::mat4>(), glm::vec3(renderState.scale[0], renderState.scale[1], renderState.scale[2]));
+                    model = translation * rotation * scale;
+                }
                 PerFrameData perFrameData = {
                     .model = model,
-                    .mvp = projection * view * model,
+                    .view = view,
+                    .proj = projection,
                     .cameraPos = glm::vec4(camera.getPosition(), 1.0f)
                 };
                 modelProgram.useProgram();
@@ -212,7 +258,8 @@ int main()
                 const glm::mat4 model = glm::scale(glm::mat4(1.0f), glm::vec3(100.0f));
                 const PerFrameData perFrameData = {
                     .model = model,
-                    .mvp = projection * view * model,
+                    .view = view,
+                    .proj = projection,
                     .cameraPos = glm::vec4(camera.getPosition(), 1.0f),
                     .isWireframe = false
                 };
@@ -234,6 +281,13 @@ int main()
             ImGui::Checkbox("Wireframe", &renderState.wireframe);
             ImGui::Separator();
             ImGui::Checkbox("Rotate", &renderState.rotate);
+            ImGui::Checkbox("Transform", &renderState.transform);
+            if (renderState.transform) {
+                ImGui::Separator();
+                ImGui::SliderFloat3("Translation", renderState.translation, -10.0f, 10.0f, "%.1f");
+                ImGui::SliderFloat3("Rotation", renderState.rotation, -180.0f, 180.0f, "%.1f");
+                ImGui::SliderFloat3("Scale", renderState.scale, 0.0f, 10.0f, "%.1f");
+            }
             ImGui::End();
 
             ImGui::Render();

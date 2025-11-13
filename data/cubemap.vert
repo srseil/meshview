@@ -2,7 +2,8 @@
 
 layout (std140, binding = 0) uniform PerFrameData {
     uniform mat4 model;
-    uniform mat4 MVP;
+    uniform mat4 view;
+	uniform mat4 proj;
     uniform vec4 cameraPos;
     uniform int isWireframe;
 };
@@ -39,6 +40,7 @@ const int indices[36] = int[36](
 void main()
 {
     int idx = indices[gl_VertexID];
-	gl_Position = MVP * vec4(pos[idx], 1.0);
+	mat4 mvp = proj * view * model;
+	gl_Position = mvp * vec4(pos[idx], 1.0);
 	dir = pos[idx].xyz;
 }

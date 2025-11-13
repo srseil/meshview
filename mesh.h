@@ -18,7 +18,11 @@ private:
 	GLuint vao;
 	GLuint vertexData;
 	GLuint indexData;
-	GLuint texture;
+	GLuint textureAlbedo;
+	GLuint textureMetallicRougness;
+	GLuint textureAmbientOcclusion;
+	GLuint textureEmissive;
+	GLuint textureNormals;
 	std::vector<unsigned int> indices;
 	std::vector<VertexData> vertices;
 };

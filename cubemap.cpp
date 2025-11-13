@@ -65,8 +65,8 @@ Cubemap::~Cubemap()
 
 void Cubemap::bind() const
 {
-    api.glBindTextures(1, 1, &handleDiffuse);
-    api.glBindTextures(2, 1, &handleIrradiance);
+    api.glBindTextures(5, 1, &handleDiffuse);
+    api.glBindTextures(6, 1, &handleIrradiance);
 }
 
 Bitmap::Bitmap(std::string fileName) : depth(1)

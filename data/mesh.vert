@@ -8,7 +8,8 @@ struct PerVertex {
 
 layout (std140, binding = 0) uniform PerFrameData {
     uniform mat4 model;
-    uniform mat4 MVP;
+    uniform mat4 view;
+    uniform mat4 proj;
     uniform vec4 cameraPos;
     uniform int isWireframe;
 };
@@ -21,9 +22,10 @@ layout (location = 0) out PerVertex vtx;
 
 void main()
 {
-    gl_Position = MVP * vec4(pos, 1.0);
+    mat4 mvp = proj * view * model;
+    gl_Position = mvp * vec4(pos, 1.0);
     mat3 normalMatrix = mat3(transpose(inverse(model)));
     vtx.uv = uv;
-    vtx.normal = normal * normalMatrix;
+    vtx.normal = normalize(normalMatrix * normal); //normal * normalMatrix;
     vtx.worldPos = (model * vec4(pos, 1.0)).xyz;
 }
