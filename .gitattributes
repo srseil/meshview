@@ -1,0 +1,4 @@
+src/gl/gl_api.h linguist-vendored=true
+src/gl/gl_core_arb.h linguist-vendored=true
+src/imgui/*.h linguist-vendored=true
+
